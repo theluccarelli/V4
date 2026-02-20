@@ -1,0 +1,33 @@
+/** @type {import('tailwindcss').Config} */
+export default {
+    content: [
+        "./index.html",
+        "./src/**/*.{js,ts,jsx,tsx}",
+    ],
+    theme: {
+        extend: {
+            colors: {
+                primary: '#ffffff',
+                secondary: '#f1f5f9', // Slate-100
+                accent: {
+                    DEFAULT: '#e11d48', // Rose-600 (more vibrant/premium red)
+                    dark: '#be123c',    // Rose-700
+                    light: '#fb7185',   // Rose-400
+                },
+                text: {
+                    DEFAULT: '#0f172a', // Slate-900
+                    muted: '#64748b',   // Slate-500
+                },
+            },
+            boxShadow: {
+                'premium': '0 10px 40px -10px rgba(0, 0, 0, 0.05)',
+                'premium-hover': '0 20px 50px -12px rgba(0, 0, 0, 0.1)',
+            },
+            fontFamily: {
+                sans: ['Inter', 'sans-serif'],
+                serif: ['Playfair Display', 'serif'],
+            },
+        },
+    },
+    plugins: [],
+}
