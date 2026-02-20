@@ -67,8 +67,9 @@ export const LeadsProvider = ({ children }) => {
             const entry = {
                 company_name: String(meetingData.company_name),
                 cnpj: String(meetingData.cnpj),
-                meeting_date: meetingData.meeting_date, // Formato esperado pelo Postgres (YYYY-MM-DD)
-                status: String(meetingData.status || 'Agendada')
+                meeting_date: meetingData.meeting_date,
+                status: String(meetingData.status || 'Agendada'),
+                sdr_name: user?.name || 'Desconhecido'
             };
 
             console.log('Objeto enviado ao Supabase:', entry);
@@ -150,6 +151,18 @@ export const LeadsProvider = ({ children }) => {
         }
     };
 
+    // Calcula performance dos SDRs a partir das reuniões Realizadas
+    const sdrPerformance = Object.values(
+        leads
+            .filter(l => l.status === 'Realizada' && l.sdr_name)
+            .reduce((acc, lead) => {
+                const name = lead.sdr_name;
+                if (!acc[name]) acc[name] = { id: name, name, role: 'SDR', meetings: 0 };
+                acc[name].meetings += 1;
+                return acc;
+            }, {})
+    );
+
     return (
         <LeadsContext.Provider value={{
             leads,
@@ -159,6 +172,7 @@ export const LeadsProvider = ({ children }) => {
             toggleMeetingNoShow,
             deleteMeeting,
             meetings: leads.filter(l => l.meeting_date),
+            sdrPerformance,
             loading
         }}>
             {children}
