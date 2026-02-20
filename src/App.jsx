@@ -7,26 +7,29 @@ import Meetings from './pages/Meetings';
 import { AuthProvider } from './context/AuthContext';
 import { LeadsProvider } from './context/LeadsContext';
 import { CartProvider } from './context/CartContext';
+import { ThemeProvider } from './context/ThemeContext';
 
 function App() {
   return (
-    <Router>
-      <AuthProvider>
-        <CartProvider>
-          <LeadsProvider>
-            <Routes>
-              <Route path="/login" element={<Login />} />
+    <ThemeProvider>
+      <Router>
+        <AuthProvider>
+          <CartProvider>
+            <LeadsProvider>
+              <Routes>
+                <Route path="/login" element={<Login />} />
 
-              <Route path="/" element={<Layout />}>
-                <Route index element={<Dashboard />} />
-                <Route path="acquisition" element={<Acquisition />} />
-                <Route path="meetings" element={<Meetings />} />
-              </Route>
-            </Routes>
-          </LeadsProvider>
-        </CartProvider>
-      </AuthProvider>
-    </Router>
+                <Route path="/" element={<Layout />}>
+                  <Route index element={<Dashboard />} />
+                  <Route path="acquisition" element={<Acquisition />} />
+                  <Route path="meetings" element={<Meetings />} />
+                </Route>
+              </Routes>
+            </LeadsProvider>
+          </CartProvider>
+        </AuthProvider>
+      </Router>
+    </ThemeProvider>
   );
 }
 
