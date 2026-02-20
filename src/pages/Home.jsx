@@ -22,7 +22,7 @@ const Home = () => {
                         </div>
 
                         <h2 className="text-5xl md:text-7xl font-serif font-light text-text mb-6 leading-tight uppercase tracking-tighter">
-                            V4 Company.
+                            Plataforma V4 - Versão de Teste
                         </h2>
 
                         <p className="text-text-light mb-10 text-lg font-light max-w-xl mx-auto">
