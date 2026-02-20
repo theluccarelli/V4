@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useLeads } from '../context/LeadsContext';
 import { supabase } from '../lib/supabase';
-import { Send, MessageSquare, UserPlus, Loader2, Calendar } from 'lucide-react';
+import { Send, MessageSquare, UserPlus, Loader2, Calendar, CornerDownRight, X } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 const Dashboard = () => {
@@ -16,6 +16,12 @@ const Dashboard = () => {
     const [isSaving, setIsSaving] = useState(false);
     const [newLead, setNewLead] = useState({ name: '', company: '' });
 
+    // Replies state
+    const [replies, setReplies] = useState({}); // { [post_id]: [reply, ...] }
+    const [activeReply, setActiveReply] = useState(null); // post_id being replied to
+    const [replyText, setReplyText] = useState('');
+    const [sendingReply, setSendingReply] = useState(false);
+
     // Initial Load
     useEffect(() => {
         const fetchData = async () => {
@@ -28,6 +34,21 @@ const Dashboard = () => {
                     .order('created_at', { ascending: false });
 
                 if (!postsError) setPosts(postsData || []);
+
+                // Fetch all replies
+                const { data: repliesData } = await supabase
+                    .from('replies')
+                    .select('*')
+                    .order('created_at', { ascending: true });
+
+                if (repliesData) {
+                    const grouped = repliesData.reduce((acc, reply) => {
+                        if (!acc[reply.post_id]) acc[reply.post_id] = [];
+                        acc[reply.post_id].push(reply);
+                        return acc;
+                    }, {});
+                    setReplies(grouped);
+                }
 
                 // Fetch Notes
                 if (user) {
@@ -95,6 +116,31 @@ const Dashboard = () => {
         if (success) setNewLead({ name: '', company: '' });
     };
 
+    const handleReply = async (postId) => {
+        if (!replyText.trim() || !user) return;
+        setSendingReply(true);
+
+        const { data, error } = await supabase
+            .from('replies')
+            .insert([{
+                post_id: postId,
+                author: user.name,
+                role: user.role || 'SDR',
+                content: replyText
+            }])
+            .select();
+
+        if (!error && data?.[0]) {
+            setReplies(prev => ({
+                ...prev,
+                [postId]: [...(prev[postId] || []), data[0]]
+            }));
+            setReplyText('');
+            setActiveReply(null);
+        }
+        setSendingReply(false);
+    };
+
     const formatTime = (dateString) => {
         const date = new Date(dateString);
         return date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
@@ -143,6 +189,7 @@ const Dashboard = () => {
                     <div className="space-y-6">
                         {posts.map((post) => (
                             <div key={post.id} className="card-premium border-l-4 border-l-accent animate-slide-up">
+                                {/* Post Header */}
                                 <div className="flex justify-between items-start mb-4">
                                     <div className="flex items-center gap-3">
                                         <div className="w-10 h-10 rounded-xl bg-slate-50 flex items-center justify-center font-bold text-slate-400">
@@ -157,9 +204,76 @@ const Dashboard = () => {
                                         {formatTime(post.created_at)}
                                     </span>
                                 </div>
-                                <p className="text-sm text-slate-600 leading-relaxed font-medium">
+
+                                {/* Post Content */}
+                                <p className="text-sm text-slate-600 leading-relaxed font-medium mb-4">
                                     {post.content}
                                 </p>
+
+                                {/* Replies */}
+                                {(replies[post.id] || []).length > 0 && (
+                                    <div className="ml-6 border-l-2 border-slate-100 pl-4 space-y-3 mb-4">
+                                        {(replies[post.id] || []).map(reply => (
+                                            <div key={reply.id} className="flex gap-3 items-start">
+                                                <div className="w-7 h-7 rounded-lg bg-slate-100 flex items-center justify-center text-[10px] font-bold text-slate-400 shrink-0">
+                                                    {reply.author?.charAt(0)}
+                                                </div>
+                                                <div className="flex-1">
+                                                    <div className="flex items-baseline gap-2 mb-0.5">
+                                                        <span className="text-[11px] font-black text-text">{reply.author}</span>
+                                                        <span className="text-[9px] font-bold text-slate-300">{formatTime(reply.created_at)}</span>
+                                                    </div>
+                                                    <p className="text-xs text-slate-500 leading-relaxed">{reply.content}</p>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+
+                                {/* Reply Toggle Button */}
+                                <div className="flex items-center gap-2">
+                                    <button
+                                        onClick={() => {
+                                            setActiveReply(activeReply === post.id ? null : post.id);
+                                            setReplyText('');
+                                        }}
+                                        className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-accent transition-colors"
+                                    >
+                                        {activeReply === post.id
+                                            ? <><X className="w-3 h-3" /> Cancelar</>
+                                            : <><MessageSquare className="w-3 h-3" /> Responder {(replies[post.id] || []).length > 0 ? `(${replies[post.id].length})` : ''}</>
+                                        }
+                                    </button>
+                                </div>
+
+                                {/* Inline Reply Form */}
+                                {activeReply === post.id && (
+                                    <div className="mt-3 flex gap-3 items-start animate-fade-in">
+                                        <div className="w-8 h-8 rounded-xl bg-accent/10 flex items-center justify-center text-accent font-black text-sm shrink-0">
+                                            {user?.name?.charAt(0)}
+                                        </div>
+                                        <div className="flex-1 flex gap-2">
+                                            <input
+                                                autoFocus
+                                                className="flex-1 bg-slate-50 rounded-xl px-4 py-2.5 text-xs focus:outline-none focus:ring-2 focus:ring-accent/10 border border-slate-100 placeholder:text-slate-300"
+                                                placeholder={`Responder ${post.author}...`}
+                                                value={replyText}
+                                                onChange={e => setReplyText(e.target.value)}
+                                                onKeyDown={e => e.key === 'Enter' && !e.shiftKey && handleReply(post.id)}
+                                            />
+                                            <button
+                                                onClick={() => handleReply(post.id)}
+                                                disabled={sendingReply || !replyText.trim()}
+                                                className="p-2.5 bg-accent text-white rounded-xl hover:bg-accent-dark transition-colors disabled:opacity-40"
+                                            >
+                                                {sendingReply
+                                                    ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                                    : <CornerDownRight className="w-3.5 h-3.5" />
+                                                }
+                                            </button>
+                                        </div>
+                                    </div>
+                                )}
                             </div>
                         ))}
                     </div>
