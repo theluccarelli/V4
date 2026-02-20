@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useLeads } from '../context/LeadsContext';
 import { supabase } from '../lib/supabase';
-import { Send, MessageSquare, UserPlus, Loader2, Calendar, CornerDownRight, X } from 'lucide-react';
+import { Send, MessageSquare, UserPlus, Loader2, Calendar, CornerDownRight, X, Heart } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 const Dashboard = () => {
@@ -21,6 +21,7 @@ const Dashboard = () => {
     const [activeReply, setActiveReply] = useState(null); // post_id being replied to
     const [replyText, setReplyText] = useState('');
     const [sendingReply, setSendingReply] = useState(false);
+    const [likedPosts, setLikedPosts] = useState(new Set()); // track liked posts this session
 
     // Initial Load
     useEffect(() => {
@@ -141,6 +142,21 @@ const Dashboard = () => {
         setSendingReply(false);
     };
 
+    const handleLike = async (post) => {
+        const alreadyLiked = likedPosts.has(post.id);
+        const newLikes = alreadyLiked ? post.likes - 1 : post.likes + 1;
+
+        // Optimistic update
+        setPosts(prev => prev.map(p => p.id === post.id ? { ...p, likes: newLikes } : p));
+        setLikedPosts(prev => {
+            const next = new Set(prev);
+            alreadyLiked ? next.delete(post.id) : next.add(post.id);
+            return next;
+        });
+
+        await supabase.from('posts').update({ likes: newLikes }).eq('id', post.id);
+    };
+
     const formatTime = (dateString) => {
         const date = new Date(dateString);
         return date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
@@ -230,8 +246,8 @@ const Dashboard = () => {
                                     </div>
                                 )}
 
-                                {/* Reply Toggle Button */}
-                                <div className="flex items-center gap-2">
+                                {/* Reply Toggle Button + Like Button */}
+                                <div className="flex items-center justify-between mt-1">
                                     <button
                                         onClick={() => {
                                             setActiveReply(activeReply === post.id ? null : post.id);
@@ -243,6 +259,17 @@ const Dashboard = () => {
                                             ? <><X className="w-3 h-3" /> Cancelar</>
                                             : <><MessageSquare className="w-3 h-3" /> Responder {(replies[post.id] || []).length > 0 ? `(${replies[post.id].length})` : ''}</>
                                         }
+                                    </button>
+
+                                    <button
+                                        onClick={() => handleLike(post)}
+                                        className={`flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest transition-colors ${likedPosts.has(post.id)
+                                                ? 'text-rose-500'
+                                                : 'text-slate-300 hover:text-rose-400'
+                                            }`}
+                                    >
+                                        <Heart className={`w-3.5 h-3.5 transition-all ${likedPosts.has(post.id) ? 'fill-rose-500' : ''}`} />
+                                        {post.likes > 0 ? post.likes : ''}
                                     </button>
                                 </div>
 
